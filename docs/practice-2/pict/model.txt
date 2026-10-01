@@ -1,0 +1,34 @@
+# Модель PICT: Authorization Service, POST /api/internal/authorize
+# Требования: tz/04-authorization.md (§2 алгоритм проверки, §4 лимиты), docs/api-spec.md
+# Значения параметров соответствуют классам эквивалентности из docs/practice-2/test-design.md (раздел 1).
+# Суммы задаются относительно остатков:
+#   BELOW - amount меньше остатка, EQUAL - amount равен остатку (граница ON),
+#   ABOVE - amount больше остатка на 1 коп. (граница OFF).
+# Генерация: pict model.txt > cases.txt (покрытие 2-wise, по умолчанию /o:2)
+
+CardStatus:      ACTIVE, INACTIVE, BLOCKED, EXPIRED
+Expiry:          FUTURE, CURRENT_MONTH, PAST
+AmountVsBalance: BELOW, EQUAL, ABOVE
+AmountVsDaily:   BELOW, EQUAL, ABOVE
+AmountVsMonthly: BELOW, EQUAL, ABOVE
+TerminalType:    POS, ATM, ECOM
+BinLookup:       AVAILABLE, UNAVAILABLE
+
+# C1. Отказ по статусу INACTIVE/BLOCKED маскирует отказ по сроку действия: не сочетаем их в одной строке.
+#     EXPIRED + PAST допустимо: согласованное состояние карты, оба признака дают responseCode 54.
+IF [CardStatus] = "INACTIVE" OR [CardStatus] = "BLOCKED" THEN [Expiry] <> "PAST";
+
+# C2. Карта не в статусе ACTIVE отклоняется на шаге 2: лимиты и баланс не проверяются,
+#     поэтому суммы фиксируются нейтральным значением, чтобы пары с ними не считались покрытыми впустую.
+IF [CardStatus] <> "ACTIVE" THEN [AmountVsBalance] = "BELOW" AND [AmountVsDaily] = "BELOW" AND [AmountVsMonthly] = "BELOW";
+
+# C3. Карта с истёкшим сроком отклоняется на шаге 3: суммы также нейтральны.
+IF [Expiry] = "PAST" THEN [AmountVsBalance] = "BELOW" AND [AmountVsDaily] = "BELOW" AND [AmountVsMonthly] = "BELOW";
+
+# C4. Отказ по дневному лимиту (шаг 4): месячный лимит и баланс не проверяются - нейтральны.
+# C5. Отказ по месячному лимиту (шаг 5): баланс не проверяется - нейтрален.
+#     Так в строке не больше одного превышения, а значения EQUAL покрываются только там,
+#     где проверка действительно выполняется. Два превышения сразу (порядок шагов 4-6)
+#     добавлены вручную в test-design.md.
+IF [AmountVsDaily] = "ABOVE" THEN [AmountVsMonthly] = "BELOW" AND [AmountVsBalance] = "BELOW";
+IF [AmountVsMonthly] = "ABOVE" THEN [AmountVsBalance] = "BELOW";
