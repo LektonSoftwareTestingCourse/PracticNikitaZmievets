@@ -1,0 +1,19 @@
+# Модель PICT: Card-Management Service, POST /api/cards (создание карты)
+# Требования: tz/05-card-management.md (§2), docs/api/openapi.yaml (CardCreateRequest)
+# Значения параметров соответствуют классам эквивалентности из docs/practice-2/test-design.md (раздел 1).
+# OMITTED - поле не передаётся в теле запроса (должно подставиться значение по умолчанию).
+# Префикс ~ - негативный класс: PICT помещает в строку не более одного негативного значения
+# и сочетает каждое негативное значение со всеми позитивными значениями остальных параметров.
+# Генерация: pict model-card-management.txt > cases-card-management.txt (покрытие 2-wise)
+
+Bin:            BIN_400000, BIN_400004, ~UNREGISTERED
+CardholderName: LATIN, LATIN_255, ~CYRILLIC
+CurrencyCode:   OMITTED, RUB_643, USD_840, ~TWO_DIGITS
+DailyLimit:     OMITTED, ZERO, CUSTOM
+MonthlyLimit:   OMITTED, EQUAL_DAILY, DAILY_X30, ~LESS_THAN_DAILY
+InitialBalance: OMITTED, ZERO, CUSTOM
+
+# C1. При нулевом дневном лимите значение DAILY_X30 совпадает с EQUAL_DAILY (0 x 30 = 0),
+#     а LESS_THAN_DAILY невозможно без отрицательного месячного лимита (это отдельный класс).
+#     Оставляем только различимые значения месячного лимита.
+IF [DailyLimit] = "ZERO" THEN [MonthlyLimit] = "OMITTED" OR [MonthlyLimit] = "EQUAL_DAILY";
