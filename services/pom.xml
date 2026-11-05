@@ -32,6 +32,9 @@
         <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
         <!-- E2E require docker compose; enabled via -Pe2e-tests -->
         <skipE2eTests>true</skipE2eTests>
+        <!-- JaCoCo: prepare-agent дописывает свой агент в argLine, surefire берёт его оттуда -->
+        <jacoco.version>0.8.14</jacoco.version>
+        <argLine>-Dnet.bytebuddy.experimental=true</argLine>
     </properties>
 
 
@@ -238,12 +241,37 @@
                         </annotationProcessorPaths>
                     </configuration>
                 </plugin>
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>${jacoco.version}</version>
+                    <executions>
+                        <execution>
+                            <id>prepare-agent</id>
+                            <goals>
+                                <goal>prepare-agent</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>report</id>
+                            <phase>verify</phase>
+                            <goals>
+                                <goal>report</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
             </plugins>
         </pluginManagement>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
+            </plugin>
+            <!-- JaCoCo: отчёт target/site/jacoco (index.html + jacoco.xml) для каждого модуля -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
             </plugin>
         </plugins>
     </build>
