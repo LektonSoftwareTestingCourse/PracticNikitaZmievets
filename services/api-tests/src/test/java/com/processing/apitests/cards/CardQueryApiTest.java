@@ -16,6 +16,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Map;
 
 import static io.restassured.RestAssured.given;
@@ -36,21 +37,31 @@ import static org.hamcrest.Matchers.oneOf;
 @DisplayName("GET /api/cards: чтение, список, кэш Gateway")
 class CardQueryApiTest extends ApiTestBase {
 
-    /** BIN 400003 используется для изолированного набора: фильтр по BIN + startDate этого прогона. */
+    /**
+     * Изолированный набор: BIN 400003 + окно [batchFrom; batchTo] по createdAt самих сгенерированных карт.
+     * Окно берётся из ответа сервера, а не из часов тест-раннера: так в выборку не попадают карты с тем же BIN,
+     * созданные соседними тестами за мгновение до генерации, и не важна разница часов раннера и контейнера.
+     */
     private static final String LIST_BIN = "400003";
     private static final int LIST_SIZE = 12;
-    private static Instant listCreatedFrom;
+    private static Instant batchFrom;
+    private static Instant batchTo;
 
     @BeforeAll
     static void generateIsolatedCards() {
-        listCreatedFrom = Instant.now().minus(1, ChronoUnit.SECONDS);
-        given()
+        List<String> createdAt = given()
                 .spec(Specs.gateway())
                 .body(Map.of("count", LIST_SIZE, "bins", new String[]{LIST_BIN}))
         .when()
                 .post(Endpoints.CARDS_GENERATE)
         .then()
-                .statusCode(201);
+                .statusCode(201)
+                .extract().jsonPath().getList("cards.createdAt", String.class);
+
+        // БД хранит createdAt с точностью до микросекунд: нижнюю границу округляем вниз, верхняя и так не меньше
+        batchFrom = createdAt.stream().map(Instant::parse).min(Instant::compareTo).orElseThrow()
+                .truncatedTo(ChronoUnit.MICROS);
+        batchTo = createdAt.stream().map(Instant::parse).max(Instant::compareTo).orElseThrow();
     }
 
     @Test
@@ -141,7 +152,8 @@ class CardQueryApiTest extends ApiTestBase {
         given()
                 .spec(Specs.gateway())
                 .queryParam("bin", LIST_BIN)
-                .queryParam("startDate", listCreatedFrom.toString())
+                .queryParam("startDate", batchFrom.toString())
+                .queryParam("endDate", batchTo.toString())
                 .queryParam("limit", 50)
         .when()
                 .get(Endpoints.CARDS)
@@ -160,7 +172,8 @@ class CardQueryApiTest extends ApiTestBase {
         given()
                 .spec(Specs.gateway())
                 .queryParam("bin", LIST_BIN)
-                .queryParam("startDate", listCreatedFrom.toString())
+                .queryParam("startDate", batchFrom.toString())
+                .queryParam("endDate", batchTo.toString())
                 .queryParam("limit", limit)
                 .queryParam("offset", offset)
         .when()
@@ -177,7 +190,8 @@ class CardQueryApiTest extends ApiTestBase {
         given()
                 .spec(Specs.gateway())
                 .queryParam("bin", LIST_BIN)
-                .queryParam("startDate", listCreatedFrom.toString())
+                .queryParam("startDate", batchFrom.toString())
+                .queryParam("endDate", batchTo.toString())
                 .queryParam("status", "ACTIVE")
         .when()
                 .get(Endpoints.CARDS)
@@ -251,7 +265,8 @@ class CardQueryApiTest extends ApiTestBase {
         given()
                 .spec(Specs.gateway())
                 .queryParam("bin", LIST_BIN)
-                .queryParam("startDate", listCreatedFrom.toString())
+                .queryParam("startDate", batchFrom.toString())
+                .queryParam("endDate", batchTo.toString())
         .when()
                 .get(Endpoints.CARDS)
         .then()
