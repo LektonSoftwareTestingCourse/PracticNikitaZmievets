@@ -1,0 +1,99 @@
+name: API Tests (practice 5)
+
+# API-тесты синхронных HTTP-контрактов СМП (модуль services/api-tests).
+# Поднимает весь стек через docker compose и прогоняет тесты одной командой:
+#   mvn -f services/pom.xml -P api-tests test
+# Тесты с тегом known-defect (контракт, который реализация нарушает — см. docs/practice-5/api-test-report.md)
+# из штатного прогона исключены.
+
+on:
+  push:
+    branches:
+    - 'practice-5**'
+    paths:
+    - 'services/**'
+    - 'docker-compose.yaml'
+    - '.env.example'
+    - '.github/workflows/api-tests.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+    - 'services/**'
+    - 'docker-compose.yaml'
+    - '.github/workflows/api-tests.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: api-tests-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Normalize GHCR namespace to lowercase
+      run: echo "GHCR_USER=${OWNER,,}" >> "$GITHUB_ENV"
+      env:
+        OWNER: ${{ github.repository_owner }}
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v5
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        cache: 'maven'
+
+    - name: Create .env file
+      run: cp .env.example .env
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Cache Maven/npm build mounts
+      uses: actions/cache@v4
+      with:
+        path: |
+          var-cache-m2
+          var-cache-npm
+        key: docker-build-mounts-${{ hashFiles('services/**/pom.xml', 'services/dashboard/package.json') }}
+        restore-keys: |
+          docker-build-mounts-
+
+    - name: Inject build mounts into Buildx
+      uses: reproducible-containers/buildkit-cache-dance@v3.1.2
+      with:
+        cache-map: |
+          {
+            "var-cache-m2": "/root/.m2",
+            "var-cache-npm": "/root/.npm"
+          }
+        skip-extraction: false
+
+    - name: Build Docker images
+      run: docker compose build
+
+    - name: Start stack and wait until every service is healthy
+      run: docker compose up -d --wait --wait-timeout 300
+
+    - name: Run API tests
+      run: mvn -B -f services/pom.xml -P api-tests test
+
+    - name: Upload surefire reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: api-tests-surefire-reports
+        path: services/api-tests/target/surefire-reports/
+        if-no-files-found: ignore
+
+    - name: Show logs on failure
+      if: failure()
+      run: docker compose logs --tail=200
+
+    - name: Cleanup
+      if: always()
+      run: docker compose down -v

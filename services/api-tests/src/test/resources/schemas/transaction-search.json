@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "TransactionSearchResponse - openapi components.schemas.TransactionSearchResponse",
+  "type": "object",
+  "required": ["total", "transactions"],
+  "properties": {
+    "total": {"type": "integer", "minimum": 0},
+    "transactions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "mti", "stan", "rrn", "pan", "processingCode", "amount", "currencyCode",
+                     "terminalId", "terminalType", "merchantId", "mcc", "acquirerId", "issuerId",
+                     "acquiringFee", "status", "declineReason", "authCode", "processingTimeMs",
+                     "transmissionDateTime", "createdAt"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[0-9a-f-]{36}$"},
+          "pan": {"type": "string", "pattern": "^[0-9]{16}$"},
+          "amount": {"type": "number"},
+          "status": {"type": "string", "enum": ["APPROVED", "DECLINED"]},
+          "rrn": {"type": ["string", "null"]},
+          "authCode": {"type": ["string", "null"]},
+          "declineReason": {"type": ["string", "null"]},
+          "acquiringFee": {"type": ["number", "null"]}
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

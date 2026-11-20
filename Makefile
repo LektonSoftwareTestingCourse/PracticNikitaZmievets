@@ -13,7 +13,7 @@ else
 endif
 
 # Специальные цели
-.PHONY: run stop clean build status logs smoke smoke-win test lint
+.PHONY: run stop clean build status logs smoke smoke-win test lint api-tests
 .PHONY: mvn-all mvn-clean mvn-test mvn-lint mvn-service
 .PHONY: npm-install npm-lint npm-test npm-build
 
@@ -28,6 +28,7 @@ help:
 	@echo "  make status        - Containers status"
 	@echo "  make logs          - Show logs (SERVICE=gateway)"
 	@echo "  make smoke         - Run smoke tests"
+	@echo "  make api-tests     - Up stack and run API tests (practice 5)"
 	@echo ""
 	@echo "General"
 	@echo "  make test          - Run all tests (Maven + NPM)"
@@ -73,6 +74,11 @@ logs:
 
 smoke:
 	$(SMOKE_CMD)
+
+# API-тесты (практика 5): поднять стек, дождаться healthy, прогнать services/api-tests
+api-tests: .env
+	$(DOCKER_COMPOSE) up -d --wait --wait-timeout 300
+	$(MVN) -P api-tests test
 
 # Общее
 test: mvn-test npm-test

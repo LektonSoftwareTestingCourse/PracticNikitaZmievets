@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.processing</groupId>
+        <artifactId>processing-platform</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>api-tests</artifactId>
+    <name>api-tests</name>
+    <description>API-тесты синхронных HTTP-контрактов СМП (практика 5)</description>
+
+    <properties>
+        <!-- Версии согласованы с существующим модулем e2e-tests -->
+        <rest-assured.version>5.4.0</rest-assured.version>
+        <awaitility.version>4.2.2</awaitility.version>
+
+        <!-- Модуль не содержит production-кода: покрытие не собираем -->
+        <jacoco.skip>true</jacoco.skip>
+
+        <!-- Группы, исключённые из штатного прогона: тесты, фиксирующие известные дефекты (красные по контракту) -->
+        <apiTests.excludedGroups>known-defect</apiTests.excludedGroups>
+        <apiTests.groups/>
+
+        <!-- Адреса сервисов: переопределяются -Dgateway.url=... или переменными окружения -->
+        <gateway.url>http://localhost:8080</gateway.url>
+        <card-management.url>http://localhost:8081</card-management.url>
+        <switch.url>http://localhost:8082</switch.url>
+        <authorization.url>http://localhost:8083</authorization.url>
+        <merchant.url>http://localhost:8084</merchant.url>
+        <terminal.url>http://localhost:8085</terminal.url>
+        <logger.url>http://localhost:8088</logger.url>
+        <bin-lookup.url>http://localhost:8096</bin-lookup.url>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>rest-assured</artifactId>
+            <version>${rest-assured.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>${rest-assured.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <version>${awaitility.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <excludedGroups>${apiTests.excludedGroups}</excludedGroups>
+                    <groups>${apiTests.groups}</groups>
+                    <trimStackTrace>false</trimStackTrace>
+                    <systemPropertyVariables>
+                        <gateway.url>${gateway.url}</gateway.url>
+                        <card-management.url>${card-management.url}</card-management.url>
+                        <switch.url>${switch.url}</switch.url>
+                        <authorization.url>${authorization.url}</authorization.url>
+                        <merchant.url>${merchant.url}</merchant.url>
+                        <terminal.url>${terminal.url}</terminal.url>
+                        <logger.url>${logger.url}</logger.url>
+                        <bin-lookup.url>${bin-lookup.url}</bin-lookup.url>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
