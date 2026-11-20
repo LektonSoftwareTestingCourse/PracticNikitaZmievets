@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "ErrorResponse - openapi components.schemas.ErrorResponse (required: error, message, timestamp)",
+  "type": "object",
+  "required": ["error", "message", "timestamp", "serviceName"],
+  "properties": {
+    "error": {"type": "string", "minLength": 1},
+    "message": {"type": "string"},
+    "timestamp": {"type": "string"},
+    "serviceName": {"type": ["string", "null"]},
+    "retryAfterMs": {"type": ["string", "integer", "null"]}
+  },
+  "additionalProperties": false
+}

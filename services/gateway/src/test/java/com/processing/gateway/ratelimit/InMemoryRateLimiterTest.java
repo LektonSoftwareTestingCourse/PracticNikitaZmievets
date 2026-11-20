@@ -8,9 +8,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Время подменяется fake-тикером — тесты не зависят от реальных часов и не используют sleep.
- */
 class InMemoryRateLimiterTest {
 
     private static final String CLIENT = "10.0.0.1";
@@ -21,7 +18,6 @@ class InMemoryRateLimiterTest {
 
     @BeforeEach
     void setUp() {
-        // capacity = 2 запроса, пополнение 1 токен в секунду
         rateLimiter = InMemoryRateLimiter.forTesting(2, 1, Duration.ofMinutes(10), 100, nowNanos::get);
     }
 
